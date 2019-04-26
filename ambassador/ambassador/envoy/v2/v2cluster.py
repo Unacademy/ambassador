@@ -40,6 +40,21 @@ class V2Cluster(dict):
             'type': cluster.type.upper(),
             'lb_policy': cluster.lb_type.upper(),
             'connect_timeout':"%0.3fs" % (float(cluster.connect_timeout_ms) / 1000.0),
+            'circuit_breakers': {
+                'thresholds': [{
+                    'priority': 'DEFAULT',
+                    'max_connections': 20000,
+                    'max_pending_requests': 20000,
+                    'max_requests': 20000,
+                    'max_retries': 3
+                }, {
+                    'priority': 'HIGH',
+                    'max_connections': 20000,
+                    'max_pending_requests': 20000,
+                    'max_requests': 20000,
+                    'max_retries': 3
+                }]
+            },
             'load_assignment': {
                 'cluster_name': cluster.name,
                 'endpoints': [
