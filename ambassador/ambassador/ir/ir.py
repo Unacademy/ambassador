@@ -160,7 +160,7 @@ class IR:
 
         # After the Ambassador and TLS modules are done, we need to set up the
         # filter chains, which requires checking in on the auth, and
-        # ratelimit configuration. Note that order of the filters matter.        
+        # ratelimit configuration. Note that order of the filters matter.
         self.save_filter(IRAuth(self, aconf))
 
         # ...note that ratelimit is a filter too...
@@ -241,14 +241,16 @@ class IR:
 
     # Save secrets from our aconf.
     def save_secret_info(self, aconf):
-        aconf_secrets = aconf.get_config("secret") or {}
+        aconf_secrets = aconf.get_config("secrets") or {}
 
-        for secret_name, aconf_secret in aconf_secrets.items():
+        for secret_key, aconf_secret in aconf_secrets.items():
             # Ignore anything that doesn't at least have a public half.
             if aconf_secret.get('tls_crt'):
                 secret_info = SecretInfo.from_aconf_secret(aconf_secret)
+                secret_name = secret_info.name
                 secret_namespace = secret_info.namespace
 
+                self.logger.debug(f'saving {secret_name}.{secret_namespace} (from {secret_key}) in secret_info')
                 self.secret_info[f'{secret_name}.{secret_namespace}'] = secret_info
 
     # Save TLS contexts from the aconf into the IR. Note that the contexts in the aconf
@@ -308,7 +310,9 @@ class IR:
         # OK, do we have a secret_info for it??
         secret_info = self.secret_info.get(ss_key, None)
 
-        if not secret_info:
+        if secret_info:
+            self.logger.debug(f"resolve_secret {ss_key}: found secret_info")
+        else:
             # No secret_info, so ask the secret_handler to find us one.
             self.logger.debug(f"resolve_secret {ss_key}: asking handler to load")
             secret_info = self.secret_handler.load_secret(context, secret_name, namespace)
@@ -515,7 +519,7 @@ class IR:
         for key in [ 'diagnostics', 'liveness_probe', 'readiness_probe', 'statsd' ]:
             od[key] = self.ambassador_module.get(key, {}).get('enabled', False)
 
-        for key in [ 'use_proxy_proto', 'use_remote_address', 'x_forwarded_proto_redirect' ]:
+        for key in [ 'use_proxy_proto', 'use_remote_address', 'x_forwarded_proto_redirect', 'enable_http10' ]:
             od[key] = self.ambassador_module.get(key, False)
 
         od['xff_num_trusted_hops'] = self.ambassador_module.get('xff_num_trusted_hops', 0)
